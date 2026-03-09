@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Smart Garden</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#eef2f3;
+text-align:center;
+}
+
+.container{
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+}
+
+.card{
+background:white;
+padding:20px;
+margin:10px;
+border-radius:10px;
+width:180px;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
+}
+
+button{
+padding:10px;
+margin:5px;
+border:none;
+background:#4CAF50;
+color:white;
+border-radius:5px;
+cursor:pointer;
+}
+
+canvas{
+max-width:800px;
+margin-top:30px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Smart Garden Dashboard</h1>
+
+<div class="container">
+
+<div class="card">
+<h3>Nhiệt độ</h3>
+<p id="temp">--</p>
+</div>
+
+<div class="card">
+<h3>Độ ẩm</h3>
+<p id="hum">--</p>
+</div>
+
+<div class="card">
+<h3>Ánh sáng</h3>
+<p id="light">--</p>
+</div>
+
+<div class="card">
+<h3>Bơm nước</h3>
+<p id="pump">OFF</p>
+
+<button onclick="pumpOn()">ON</button> <button onclick="pumpOff()">OFF</button>
+
+</div>
+
+</div>
+
+<canvas id="chart"></canvas>
+
+<script>
+
+const ESP32_IP="http://192.168.1.100";
+
+let labels=[]
+let tempData=[]
+let humData=[]
+
+const ctx=document.getElementById("chart").getContext("2d");
+
+const chart=new Chart(ctx,{
+type:'line',
+data:{
+labels:labels,
+datasets:[
+{
+label:"Temp",
+data:tempData
+},
+{
+label:"Humidity",
+data:humData
+}
+]
+}
+})
+
+async function getData(){
+
+try{
+
+const res=await fetch(ESP32_IP+"/data")
+const data=await res.json()
+
+document.getElementById("temp").innerText=data.temp
+document.getElementById("hum").innerText=data.hum
+document.getElementById("light").innerText=data.light
+document.getElementById("pump").innerText=data.pump
+
+updateChart(data)
+
+}catch(e){
+
+console.log("ESP32 offline")
+
+}
+
+}
+
+function updateChart(data){
+
+const time=new Date().toLocaleTimeString()
+
+labels.push(time)
+tempData.push(data.temp)
+humData.push(data.hum)
+
+if(labels.length>20){
+
+labels.shift()
+tempData.shift()
+humData.shift()
+
+}
+
+chart.update()
+
+}
+
+async function pumpOn(){
+
+await fetch(ESP32_IP+"/pump/on")
+
+}
+
+async function pumpOff(){
+
+await fetch(ESP32_IP+"/pump/off")
+
+}
+
+setInterval(getData,3000)
+
+</script>
+
+</body>
+</html>
